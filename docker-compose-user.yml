@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+  flask:
+    build: ./user
+    container_name: user 
+    restart: always
+    environment:
+        - APP_NAME=user
+    volumes:
+        - /datadrive/wdw/BE_wellcare_dev/user/user.sock:/app/user/user.sock
+    expose:
+      - 8080
+
+  nginx_user:
+    build: ./nginx_user
+    container_name: nginx_user
+    restart: always
+    ports:
+        - "5001:5001"
+
+
+

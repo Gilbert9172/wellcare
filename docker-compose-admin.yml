@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  admin:
+    build: ./admin
+    container_name : admin
+    restart : always
+    environment:
+        - APP_NAME=admin
+    volumes:
+        - /datadrive/wdw/BE_wellcare_dev/media:/app/media
+        - /datadrive/wdw/BE_wellcare_dev/photos:/app/photos
+        - /datadrive/wdw/BE_wellcare_dev/excel:/app/excel
+        - /datadrive/wdw/BE_wellcare_dev/stats:/app/stats
+        - /datadrive/wdw/BE_wellcare_dev/admin/admin.sock:/app/admin/admin.sock
+    expose:
+      - 8081
+
+  nginx_admin:
+    build: ./nginx_admin
+    container_name: nginx_admin
+    restart: always
+    ports:
+        - "5002:5002"
+

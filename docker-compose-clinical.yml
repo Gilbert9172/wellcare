@@ -1,0 +1,23 @@
+version: "3"
+
+services:  
+  clinical_trial:
+    build: ./clinical_trial
+    container_name : clinical_trial
+    restart : always
+    environment:
+        - APP_NAME=clinical_trial
+    volumes:
+        - /datadrive/wdw/BE_wellcare_dev/media:/app/media
+        - /datadrive/wdw/BE_wellcare_dev/clinical_trial/clinical.sock:/app/clinical_trial/clinical.sock
+    expose:
+      - 8082
+
+
+  nginx_clinical:
+    build: ./nginx_clinical_trial
+    container_name: nginx_clinical_trial
+    restart: always
+    ports:
+        - "5003:5003"
+ 
