@@ -1,63 +1,39 @@
-"""
--중복제거
-SELECT DISTINCT (컬럼명) FROM 테이블명
-
--중복된 데이터 제거 후 COUNT
-SELECT COUNT(DISTINCT (컬럼명)) FROM 테이블명
-
--중복찾기
-SELECT 컬럼명 FROM 테이블명 GROUP BY 컬럼명 HAVING COUNT (컬럼명) > 1
-"""
-
-"""
-1. 중복 예약 제외 "이름", "휴대폰 번호", "생년월일", "성별"
-(휴대폰 번호는 개개인의 고유번호임으로 휴대폰 번호로만 조회.)
-
-SQL_HEAD : SELECT user_name, user.user_birth, user_phone
-SQL_BODY : FROM user, resv_consultation
-SQL_Qeury : WHERE user.id = resv_consultation.id
-
-2. 예약된 이름이 "연구소 비는 날", "이차방문", "2차 방문", 또는 "테스트"
-SQL_HEAD : SELECT user_name 
-SQL_BODY : FROM user
-SQL_Qeury : WHERE user_name LIKE '%연구소%' OR
-            user_name LIKE '%차%' OR 
-            user_name LIKE '%방문%' OR
-            user_name LIKE '%테스트%' OR 
-            user_name LIKE '%test%'
-
-3. 상태가 "예약 취소(1)" OR "관리자 취소(3)"
-SQL_HEAD : SELECT user_id, user_name, resv_flag 
-SQL_BODY : FROM user,resv_consultation
-SQL_Qeury : WHERE resv_flag=1 OR resv_flag=3
-"""
-
-"""
-SQL HEAD / SQL BODY 를 따로 정의해주기.
-"""
-
-from flask import request
 from flask_restx import Resource, reqparse
 from .reservation import Reservation
 import app
 from sqlalchemy import text
+from datetime import datetime
+import numpy
 
 parser = reqparse.RequestParser()
 # parser = request 값.
 parser.add_argument('Authorization', help='Bearer 토큰', location='headers', required=True)
 
 
-
+#-- Token_Sql
 TOKEN_CHECK_SQL = 'SELECT * FROM admin_account_token WHERE token=:token'
 
-# SQL문 HEAD
-SQL_HEAD1 = 'SELECT user_name, user.user_birth, user_phone '
-# SQL_HEAD2 = 'SELECT user_name ' 
-# SQL_HEAD = 'SELECT user_id, user_name, resv_flag '
-USER_SELECT = 'SELECT * FROM user'
+#-- Sql_Header
+SQL_HEAD1 = 'SELECT user.id, user_name, user_birth, user_gender, user_phone, resv_flag '
+SQL_HEAD2 = 'SELECT user.id, user_name, user_phone, resv_date '
 
-# SQL문 Body
-SQL_BODY1 = 'FROM user, resv_consultation '
+
+#-- Sql_Body
+SQL_BODY1 = 'FROM user '\
+            'INNER JOIN resv_consultation '\
+            'ON user.id = resv_consultation.user_id '
+
+
+#-- Sql_Query
+SQL_QUERY1 = 'WHERE (user_name NOT LIKE "%스트%" AND \
+                    user_name NOT LIKE "%st%" AND \
+                    user_name NOT LIKE "%차방문%" AND \
+                    user_name NOT LIKE "%연구소%") '
+
+SQL_QUERY2 = 'AND (resv_flag=0 OR resv_flag=2 OR resv_flag=4) '
+
+SQL_QUERY3 = 'GROUP BY user_phone '
+
 
 @Reservation.route('/dup')
 class Dup(Resource):
@@ -92,25 +68,97 @@ class Dup(Resource):
                 'message': '토큰이 유효하지 않습니다',
                 'response': {}
             }, 401
-        ###### print찍어보기.
 
         q = {}
-        s = SQL_HEAD1 + SQL_BODY1 + 'WHERE user.id = resv_consultation.id '
-        row = app.db.execute(text(s),q).fetchall()
+        sql_query1 = SQL_HEAD1 + SQL_BODY1 + (SQL_QUERY1 + SQL_QUERY2 + SQL_QUERY3)
+        row = app.db.execute(text(sql_query1)).fetchall()
 
-        from datetime import datetime
-        years = [int(row[i]['user_birth'][0:2]) for i in range(len(row))] 
-        
-        ages = []
-        for year in years:
-            if year > 21:
-                age = datetime.today().year - (1900+year) + 1
-                ages.append(age)
-            else:
-                age = datetime.today().year - (2000+year) + 1
-                ages.append(age)
-        ages.sort()
+        #-- row에서 20~70대인 사람.
+        new_row = []
+        for i in row:
+            year = int(i['user_birth'][0:2])
 
-        for i in range(1,11):
-            one = list(map(lambda x: 10*(i-1)<x<=10*i, ages))
-            print(one.count(True))
+            if year <= 2:
+                new_row.append(i)
+            elif year >= 42:
+                new_row.append(i)
+
+        reservations = len(new_row)
+
+
+        #-- 20~70대 예약자 성별 통계
+        def gender_ratio(x):
+            genders = []
+            for i in range(x):
+                gender = new_row[i]['user_gender']
+                if gender == '남성':
+                    genders.append(0)
+                else:
+                    genders.append(1)
+
+            # 퍼센트는 따로 계산하지 않아도 된다.
+            male_ratio = int(genders.count(0)/len(genders)*100)
+            female_ratio = int(genders.count(1)/len(genders)*100)
+
+            return [male_ratio, female_ratio]
+
+        # print(f'예약자 성별 통계(남,여): {gender_ratio(reservations)}')
+
+
+        #-- 예약자 연령대 통계(20대~70대)
+        def age_ratio(x):
+            ages = [] 
+            for i in range(x):
+                birth = int(new_row[i]['user_birth'][0:2])
+                if birth <= 3:
+                    age = datetime.today().year - (2000+birth) + 1
+                    ages.append(age)
+                elif birth >= 43:
+                    age = datetime.today().year - (1900+birth) + 1
+                    ages.append(age)
+
+            stats = []
+            for i in numpy.arange(1,4,0.5):
+                age_ratio = list(map(lambda x: 20*i<=x<20*(i+0.5), ages))
+                stat = int(round(age_ratio.count(True)/x,2)*100)
+                stats.append(stat)
+            
+            return stats
+
+        # print(f'예약자 연령대 통계(20대 ~ 70대): {age_ratio(reservations)}')
+
+
+
+        #-- 월별 예약 건수 비율.
+        sql_query2 = SQL_HEAD2 + SQL_BODY1 + (SQL_QUERY1 + SQL_QUERY3)
+        row2 = app.db.execute(text(sql_query2)).fetchall()  
+
+        # def month_ratio(self):
+            
+        months_2021, months_2022 = [],[]
+        for i in row2:
+
+            date = str(i['resv_date']).split("-")
+            year = date[0]
+            month = date[1]
+
+            if year == '2021':
+                months_2021.append(int(month))
+            elif year == '2022':
+                months_2022.append(int(month))
+
+        cnt_months_2021 = list(map(lambda x: int((months_2021.count(x)/len(months_2021))*100), range(1,13)))
+        cnt_months_2022 = list(map(lambda x: int((months_2022.count(x)/len(months_2022))*100), range(1,13)))
+        print(cnt_months_2021,cnt_months_2022,sep="\n")
+
+
+        return {
+            'code': 'success',
+            'message': 'success',
+            'response': {
+                '예약자 성별 통계(남/여)': gender_ratio(reservations),
+                '예약자 연령대 통계(20~70대)': age_ratio(reservations),
+                '월별 예약 건수 비율(2021)': cnt_months_2021,
+                '월별 예약 건수 비율(2022)': cnt_months_2022,
+            }
+        }, 200
