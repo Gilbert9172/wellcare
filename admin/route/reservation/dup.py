@@ -30,9 +30,11 @@ SQL_QUERY1 = 'WHERE (user_name NOT LIKE "%스트%" AND \
                     user_name NOT LIKE "%차방문%" AND \
                     user_name NOT LIKE "%연구소%") '
 
-SQL_QUERY2 = 'AND (resv_flag=0 OR resv_flag=2 OR resv_flag=4) '
+SQL_QUERY2 = 'AND (LEFT(user_birth,2) > 43 OR 3> LEFT(user_birth,2) > 0) '
 
-SQL_QUERY3 = 'GROUP BY user_phone '
+SQL_QUERY3 = 'AND (resv_flag=0 OR resv_flag=2 OR resv_flag=4) '
+
+SQL_QUERY4 = 'GROUP BY user_phone '
 
 
 @Reservation.route('/dup')
@@ -45,7 +47,7 @@ class Dup(Resource):
     def get(self):
         args = parser.parse_args()
 
-        # 토큰 정의
+        #-- 토큰 정의
         token = args['Authorization']
 
         if token == None:
@@ -57,7 +59,7 @@ class Dup(Resource):
         
         token  = token.split(' ')[1]
 
-        # 고유 토큰 담겨져 있음.
+        #-- 고유 토큰 담겨져 있음.
         row = app.db.execute(text(TOKEN_CHECK_SQL),{
             'token':token
         })
@@ -70,27 +72,15 @@ class Dup(Resource):
             }, 401
 
         q = {}
-        sql_query1 = SQL_HEAD1 + SQL_BODY1 + (SQL_QUERY1 + SQL_QUERY2 + SQL_QUERY3)
+        sql_query1 = SQL_HEAD1 + SQL_BODY1 + (SQL_QUERY1 + SQL_QUERY2 + SQL_QUERY3 + SQL_QUERY4)
         row = app.db.execute(text(sql_query1)).fetchall()
-
-        #-- row에서 20~70대인 사람.
-        new_row = []
-        for i in row:
-            year = int(i['user_birth'][0:2])
-
-            if year <= 2:
-                new_row.append(i)
-            elif year >= 42:
-                new_row.append(i)
-
-        reservations = len(new_row)
-
+        reservations = len(row)
 
         #-- 20~70대 예약자 성별 통계
-        def gender_ratio(x):
+        def gender_ratio():
             genders = []
-            for i in range(x):
-                gender = new_row[i]['user_gender']
+            for i in range(reservations):
+                gender = row[i]['user_gender']
                 if gender == '남성':
                     genders.append(0)
                 else:
@@ -106,10 +96,10 @@ class Dup(Resource):
 
 
         #-- 예약자 연령대 통계(20대~70대)
-        def age_ratio(x):
+        def age_ratio():
             ages = [] 
-            for i in range(x):
-                birth = int(new_row[i]['user_birth'][0:2])
+            for i in range(reservations):
+                birth = int(row[i]['user_birth'][0:2])
                 if birth <= 3:
                     age = datetime.today().year - (2000+birth) + 1
                     ages.append(age)
@@ -120,45 +110,48 @@ class Dup(Resource):
             stats = []
             for i in numpy.arange(1,4,0.5):
                 age_ratio = list(map(lambda x: 20*i<=x<20*(i+0.5), ages))
-                stat = int(round(age_ratio.count(True)/x,2)*100)
+                stat = int(round(age_ratio.count(True)/reservations,2)*100)
                 stats.append(stat)
             
             return stats
 
-        # print(f'예약자 연령대 통계(20대 ~ 70대): {age_ratio(reservations)}')
+        # print(f'예약자 연령대 통계(20대 ~ 70대): {age_ratio()}')
 
 
 
         #-- 월별 예약 건수 비율.
-        sql_query2 = SQL_HEAD2 + SQL_BODY1 + (SQL_QUERY1 + SQL_QUERY3)
+        sql_query2 = SQL_HEAD2 + SQL_BODY1 + (SQL_QUERY1 + SQL_QUERY2 + SQL_QUERY4)
         row2 = app.db.execute(text(sql_query2)).fetchall()  
 
-        # def month_ratio(self):
+        def month_ratio():
             
-        months_2021, months_2022 = [],[]
-        for i in row2:
+            months_2021, months_2022 = [],[]
+            for i in row2:
 
-            date = str(i['resv_date']).split("-")
-            year = date[0]
-            month = date[1]
+                date = str(i['resv_date']).split("-")
+                year = date[0]
+                month = date[1]
 
-            if year == '2021':
-                months_2021.append(int(month))
-            elif year == '2022':
-                months_2022.append(int(month))
+                if year == '2021':
+                    months_2021.append(int(month))
+                elif year == '2022':
+                    months_2022.append(int(month))
 
-        cnt_months_2021 = list(map(lambda x: int((months_2021.count(x)/len(months_2021))*100), range(1,13)))
-        cnt_months_2022 = list(map(lambda x: int((months_2022.count(x)/len(months_2022))*100), range(1,13)))
-        print(cnt_months_2021,cnt_months_2022,sep="\n")
+            cnt_months_2021 = list(map(lambda x: int((months_2021.count(x)/len(months_2021))*100), range(1,13)))
+            cnt_months_2022 = list(map(lambda x: int((months_2022.count(x)/len(months_2022))*100), range(1,13)))
+
+            return cnt_months_2021,cnt_months_2022
+        
+        # print(month_ratio()[0], month_ratio()[1], sep="\n")
 
 
         return {
             'code': 'success',
             'message': 'success',
             'response': {
-                '예약자 성별 통계(남/여)': gender_ratio(reservations),
-                '예약자 연령대 통계(20~70대)': age_ratio(reservations),
-                '월별 예약 건수 비율(2021)': cnt_months_2021,
-                '월별 예약 건수 비율(2022)': cnt_months_2022,
+                '예약자 성별 통계(남/여)': gender_ratio(),
+                '예약자 연령대 통계(20~70대)': age_ratio(),
+                '월별 예약 건수 비율(2021)': month_ratio()[0],
+                '월별 예약 건수 비율(2022)': month_ratio()[1],
             }
         }, 200

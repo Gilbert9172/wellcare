@@ -24,7 +24,7 @@ parser.add_argument('gender', help='성별(전체(0), 남성(1), 여성(2)', typ
 parser.add_argument('status', help='상태(전체(0), 예약 완료(1), 예약 취소(2), 관리자 추가(3), 관리자 취소(4), 관리자 예약 변경(5), 등록 완료(6), 수집 완료(7)', type=int, required=True, default=0)
 parser.add_argument('sort', help='없음(0), 예약일(1), 생년월일(2), 상태(3)', type=int, required=True, default=0)
 parser.add_argument('order', help='내림차순(0), 오름차순(1)', type=int, required=True, default=0)
-parser.add_argument('timestamp', help='timestamp', type=int, required=True)
+# parser.add_argument('timestamp', help='timestamp', type=int, required=True)
 
 TOKEN_CHECK_SQL = 'SELECT * FROM admin_account_token WHERE token=:token'
 
@@ -72,19 +72,42 @@ class Excel(Resource):
                 'message': '토큰이 유효하지 않습니다',
                 'response': {}
             }, 401
+
+
         q = dict()
+
+
         sql_body = RESV_SELECT_BODY
+        
+        
+        # 0
         q['start'] = args['start']
+        
+
+        # 10
         q['size'] = args['size']
+
+        #-- startdate
         if args['startdate'] != None:
             q['startdate'] = args['startdate']
             sql_body += MIN_DATE_SQL
+        print(args['startdate'], sql_body, sep="\n")
+
+
+        #-- enddate
         if args['enddate'] != None:
             q['enddate'] = args['enddate'] + ' 23:59:59'
             sql_body += MAX_DATE_SQL
+        print(args['enddate'], sql_body, sep="\n")
+
+
+        #-- 검색(이름, 휴대폰번호, 생년월일)
         if args['q'] != None:
             q['q1'] = '%' + args['q'] + '%'
             sql_body += USER_Q_SQL
+        print(args['q'],q['q1'], sql_body, sep="\n")
+
+        #-- Gender
         if args['gender'] == 1:
             q['user_gender'] = '남성'
             sql_body += GENDER_SQL
@@ -97,6 +120,9 @@ class Excel(Resource):
                     'code': 'fail',
                     'message': '잘못된 gender 값입니다'
                 }, 500
+        
+        
+        #-- status
         if args['status'] == 1:
             q['resv_flag'] = 0
             sql_body += STATUS_SQL
@@ -124,7 +150,10 @@ class Excel(Resource):
                     'code': 'fail',
                     'message': '잘못된 status 값입니다.'
                 }
+        #-- 최종 count sql
         count_sql = RESERVATION_COUNT_SQL + sql_body
+        print(f'COUNT_SQL: {count_sql}')
+
         if args['sort'] == 0:
             sql_body += 'ORDER BY RC.create_date DESC '
         elif args['sort'] == 1:
