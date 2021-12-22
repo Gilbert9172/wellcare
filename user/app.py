@@ -1,14 +1,22 @@
 from flask import Flask
-from flask_restx import Resource, Api
+from flask_restx import Api
 from flask_cors import CORS
 from route.root.root import Root
 from route.reservation.reservation import Reservation
-import sqlalchemy.pool as pool
+from route.auth.auth import Auth
+from flask_bcrypt import Bcrypt
+
 
 URL_PREFIX = '/wdw/api/v1'
 
+cors = CORS()
+bcrypt = Bcrypt()
+
 app = Flask(__name__)
-CORS(app)
+
+bcrypt.init_app(app)
+cors.init_app(app)
+
 api = Api(
   app,
   version='0.1',
@@ -18,6 +26,7 @@ api = Api(
 
 api.add_namespace(Root, URL_PREFIX)
 api.add_namespace(Reservation, URL_PREFIX + '/reservation')
+api.add_namespace(Auth, URL_PREFIX + '/auth')
 
 # DB 연결
 from dotenv import load_dotenv
@@ -25,10 +34,11 @@ import os
 
 load_dotenv()
 DB_URL = 'mysql+pymysql://' + os.getenv('MYSQL_USER') + ':' + os.getenv('MYSQL_PASSWORD') + '@' + os.getenv('MYSQL_HOST') + ':' + os.getenv('MYSQL_PORT') + '/' + os.getenv('MYSQL_DATABASE') + '?charset=' + os.getenv('MYSQL_CHARSET')
+DB_URL2 = 'mysql+pymysql://' + os.getenv('MYSQL_USER2') + ':' + os.getenv('MYSQL_PASSWORD2') + '@' + os.getenv('MYSQL_HOST2') + ':' + os.getenv('MYSQL_PORT2') + '/' + os.getenv('MYSQL_DATABASE2') + '?charset=' + os.getenv('MYSQL_CHARSET')
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 db = create_engine(DB_URL, encoding='utf8', pool_recycle=500)
-
+db2 = create_engine(DB_URL2, encoding='utf8', pool_recycle=500)
 # app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 # app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
 # app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
@@ -44,7 +54,7 @@ db = create_engine(DB_URL, encoding='utf8', pool_recycle=500)
 # app.config['FCM_API_KEY'] = os.getenv('FCM_API_KEY')
 
 app.db = db
-
+app.db2 = db2
 # port = 9000
 port = int(os.getenv('PORT'))
 

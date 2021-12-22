@@ -45,6 +45,7 @@ class Login(Resource):
         q['token'] = secrets.token_hex()
         q['aid'] = row['id']
 
+        # 로그아웃 누르지 않고 종료했을 경우를 대비해서.
         app.db.execute(text(TOKEN_DELETE_SQL), q)
         app.db.execute(text(TOKEN_INSERT_SQL), q)
 
