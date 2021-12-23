@@ -1,8 +1,10 @@
+#-- Modules
 from flask import request
 from flask_restx import Resource, reqparse
 from .auth import Auth
 from sqlalchemy import text
 import app, bcrypt, jwt
+from datetime import datetime, timedelta
 
 #-- Parser
 parser = reqparse.RequestParser()
@@ -34,7 +36,7 @@ class AuthLogin(Resource):
         db_index_id = db_row[0]
         db_user_id = db_row[1]
         db_password = db_row[2]
-        db_password = bytes(db_password, encoding = "utf-8")
+        db_byte_password = bytes(db_password, encoding = "utf-8")
 
         #-- DB에 아이디 있는지 확인
         if login['user_id'] != db_user_id:
@@ -42,8 +44,8 @@ class AuthLogin(Resource):
                 "message" : "등록된 사용자가 없습니다."
             }, 404
         
-        #-- 입력한 비번과 DB에 저장된 비번 같은지 확인. 
-        elif not bcrypt.checkpw(login['password'].encode('utf-8'), db_password):
+        #-- 입력한 비번과 DB에 저장된 비번 같은지 확인. / 암호 찾았을 때, 임시 암호로도 로그인 가능하게.(12/23)  
+        elif not bcrypt.checkpw(login['password'].encode('utf-8'), db_byte_password) and login['password'] != db_password:
             return {
                 "message" : "비밀번호가 틀립니다."
             }, 404
@@ -52,8 +54,9 @@ class AuthLogin(Resource):
         else:
             token = {
                 'uid' : db_index_id,
-                'token': jwt.encode({'name': login['user_id']}, "어케스헬인파4321", algorithm="HS256")
+                'token': jwt.encode({'name': login['user_id'], 'exp':datetime.utcnow() + timedelta(hours=9) + timedelta(seconds=30)}, "어케스헬인파4321", algorithm="HS256")
             }
+
+            token_delete = app.db2.execute(text(TOKEN_DELETE),token)
             token_row = app.db2.execute(text(TOKEN_INSERT),token)
             return token['token']
-            # return token

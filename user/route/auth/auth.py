@@ -6,5 +6,5 @@ Auth = Namespace(
     description="회원가입 API"
 )
 from . import (
-    create, login, logout
+    create, login, logout, info, find_id, find_pw, new_pw
 )

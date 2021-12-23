@@ -1,9 +1,12 @@
+#-- Modules
 from flask import request
 from flask_restx import Resource, reqparse
 from .auth import Auth
 from sqlalchemy import text
 import app, bcrypt, jwt
-#--
+
+
+#-- Parser
 parser = reqparse.RequestParser()
 parser.add_argument('user_id', help="아이디", location='json', required=True)
 parser.add_argument('password', help="비밀번호", location='json', required=True)
@@ -11,7 +14,7 @@ parser.add_argument('email', help="이메일", location='json', required=True)
 parser.add_argument("name", help="사용자 이름", location='json', required=True)
 parser.add_argument('phone', help="휴대폰 번호", location='json', required=True)
 
-#-- 
+#-- SQL
 CHECK_ID = "SELECT user_id FROM user_account WHERE (user_id=:user_id)"
 
 CHECK_EMAIL= "SELECT email FROM user_account WHERE (email=:email)"
@@ -20,8 +23,7 @@ ADD_USER = "INSERT INTO user_account (user_id, password, email, name, phone )\
             VALUES(:user_id, :password, :email, :name, :phone)"
 
 
-#--
-
+#-- Logic
 @Auth.response(200, 'Success')
 @Auth.response(500, 'Internal Server Error')
 @Auth.route('/signup')
@@ -65,7 +67,3 @@ class Signup(Resource):
             'code': 'Success',
             'message': '회원가입을 축하드립니다.'
         }, 200
-
-
-        
-
