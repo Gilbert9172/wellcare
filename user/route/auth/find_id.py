@@ -8,8 +8,8 @@ import app, bcrypt
 
 #-- Parser
 parser = reqparse.RequestParser()
-parser.add_argument("email", help="이메일 확인", location="json", required=True)
-parser.add_argument("password", help="비밀번호 확인", location="json", required=True)
+parser.add_argument("email", help="이메일 확인", location="headers", required=True)
+parser.add_argument("password", help="비밀번호 확인", location="headers", required=True)
 
 
 #-- SQL
@@ -23,11 +23,11 @@ CHECK_EMAIL = "SELECT user_id, password, email, name FROM user_account WHERE ema
 @Auth.response(500, 'Server Error')
 @Auth.route('/find-id')
 class FindId(Resource):
-    def post(self):
-
+    def get(self):
+        """아이디 찾기"""
         serach_info = {
-            'email' : request.json['email'],
-            'pw': request.json['password']
+            'email' : request.headers['email'],
+            'pw': request.headers['password']
         }
 
         search_db = app.db2.execute(text(CHECK_EMAIL),serach_info).first()

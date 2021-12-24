@@ -1,6 +1,7 @@
 #-- Modules
 from flask import request
 from flask_restx import Resource, reqparse
+from werkzeug.wrappers import response
 from .auth import Auth
 from sqlalchemy import text
 import app, bcrypt, jwt
@@ -24,7 +25,11 @@ TOKEN_DELETE = 'DELETE FROM user_account_token WHERE uid=:uid'
 @Auth.route('/login')
 class AuthLogin(Resource):
     def post(self):
-        
+        """로그인"""
+
+        #-- Validation.
+
+
         #-- 입력한 아이디/비번
         login = {
             'user_id' : request.json['user_id'],

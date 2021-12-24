@@ -7,6 +7,7 @@ from route.auth.auth import Auth
 from flask_bcrypt import Bcrypt
 
 
+
 URL_PREFIX = '/wdw/api/v1'
 
 cors = CORS()
@@ -52,6 +53,9 @@ db2 = create_engine(DB_URL2, encoding='utf8', pool_recycle=500)
 # app.config['COMPARES_DIRECTORY'] = os.getenv('COMPARES_DIRECTORY')
 
 # app.config['FCM_API_KEY'] = os.getenv('FCM_API_KEY')
+
+
+
 
 app.db = db
 app.db2 = db2

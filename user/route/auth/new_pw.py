@@ -24,7 +24,8 @@ CHANGE_PW = "UPDATE user_account SET password=:new_pw WHERE user_id=:user_id "
 @Auth.response(500, 'Server Error')
 @Auth.route('/change-pw')
 class NewPw(Resource):
-    def post(self):
+    def put(self):
+        """비밀번호 변경"""
         if request.json['new_pw'] != request.json['ch_new_pw']:
             return {
                "message" : "비밀번호가 일치하지 않습니다." 

@@ -22,7 +22,7 @@ TOKEN_DELETE = 'DELETE FROM user_account_token WHERE uid=:uid'
 @Auth.route('/logout')
 class AuthLogout(Resource):
     def post(self):
-        
+        """로그아웃"""
         token = request.headers['Authorization']
 
         # 명시적으로 Baerer을 입력해준다.(Bearer : 토큰의 종류)

@@ -24,13 +24,13 @@ ADD_USER = "INSERT INTO user_account (user_id, password, email, name, phone )\
 
 
 #-- Logic
+@Auth.expect(parser)
 @Auth.response(200, 'Success')
 @Auth.response(500, 'Internal Server Error')
 @Auth.route('/signup')
 class Signup(Resource):
-    @Auth.expect(parser)
     def post(self):
-        # args = parser.parse_args()
+        """회원가입"""
         
         #-- Password Hashing 
         encrypted_password = bcrypt.hashpw(request.json['password'].encode("utf-8"), bcrypt.gensalt()) 

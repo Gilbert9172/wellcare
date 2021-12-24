@@ -21,6 +21,7 @@ USER_TOKEN_INNER = "SELECT ua.user_id, ua.email, ua.name, ua.phone FROM user_acc
 @Auth.response(500, 'Server Error')
 class AuthInFo(Resource):
     def get(self):
+        """회원정보"""
         token = request.headers['Authorization']
         token = {
             'token':token.split(' ')[1]

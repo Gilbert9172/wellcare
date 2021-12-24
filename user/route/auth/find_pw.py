@@ -8,8 +8,8 @@ import app, bcrypt
 
 #-- Parser
 parser = reqparse.RequestParser()
-parser.add_argument("user_id", help="회원 아이디", location="json", required=True)
-parser.add_argument("email", help="이메일", location="json", required=True)
+parser.add_argument("user_id", help="회원 아이디", location="headers", required=True)
+parser.add_argument("email", help="이메일", location="headers", required=True)
 
 #-- SQL
 CHECK_EMAIL_ID = "SELECT user_id, password, email FROM user_account WHERE user_id=:user_id AND email LIKE :email"
@@ -22,11 +22,11 @@ CHECK_EMAIL_ID = "SELECT user_id, password, email FROM user_account WHERE user_i
 @Auth.response(500, 'Server Error')
 @Auth.route('/find-pw')
 class FindPw(Resource):
-    def post(self):
-        
+    def get(self):
+        """비밀번호 찾기"""
         search_info = {
-            'user_id':request.json['user_id'],
-            'email':request.json['email']
+            'user_id':request.headers['user_id'],
+            'email':request.headers['email']
         }
 
         search_row = app.db2.execute(text(CHECK_EMAIL_ID), search_info).first()
